@@ -46,8 +46,8 @@ namespace SecurePasswordMVC.Controllers
             {
                 return RedirectToAction("LoginBlocked");
             }
-            return View();
             
+            return View();
         }
         public IActionResult LoginSuccess()
         {
