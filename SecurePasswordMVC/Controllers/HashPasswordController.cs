@@ -1,8 +1,9 @@
-﻿using System.Security.Cryptography;
+﻿using Microsoft.AspNetCore.Mvc;
+using System.Security.Cryptography;
 
 namespace SecurePasswordMVC.Controllers
 {
-    public class HashPassword
+    public class HashPasswordController : Controller
     {
         public static byte[] GenerateSalt()
         {

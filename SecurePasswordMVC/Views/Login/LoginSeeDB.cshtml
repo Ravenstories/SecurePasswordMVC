@@ -1,0 +1,46 @@
+﻿@model IEnumerable<User>
+
+@{
+    ViewData["Title"] = "LoginSeeDB";
+}
+
+<h1 class="text-center">@ViewData["Title"]</h1>
+
+Users in DB (TEST ONLY)
+<table class="table table-bordered table-striped" style="width:100%">
+    <thread>
+        <tr>
+            <th>
+                Username
+            </th>
+            <th>
+                Password
+            </th>
+            <th>
+                LastLogin
+            </th>
+            <th>
+                Salt
+            </th>
+        </tr>
+    </thread>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td width="50%">
+                    @item.Username
+                </td>
+                <td width="50%">
+                    @item.Password
+                </td>
+                <td width="50%">
+                    @item.LastLogin
+                </td>
+                <td width="50%">
+                    @item.Salt
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

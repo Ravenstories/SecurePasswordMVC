@@ -1,7 +1,15 @@
+using Microsoft.EntityFrameworkCore;
+using SecurePasswordMVC.Data;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+
+
+builder.Services.AddDbContext<DB_DataContext>(options => options.UseSqlServer(
+    builder.Configuration.GetConnectionString("MvcSecurePassword_PrivatePC")
+    ));
 
 var app = builder.Build();
 

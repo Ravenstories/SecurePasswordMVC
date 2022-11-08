@@ -2,7 +2,14 @@
 {
     public class LoginCounter
     {
-        public int Counter { get; set; }
+        private static int counter;
+
+        public static int Counter
+        {
+            get { return counter; }
+            set { counter = value; }
+        }
+
         public bool TriesExeeded { get; set; }
 
     }
