@@ -1,11 +1,12 @@
 using Microsoft.EntityFrameworkCore;
+using SecurePasswordMVC.Hubs;
 using SecurePasswordMVC.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
-
+builder.Services.AddSignalR();
 
 builder.Services.AddDbContext<DB_DataContext>(options => options.UseSqlServer(
     builder.Configuration.GetConnectionString("MvcSecurePassword_PrivatePC")
@@ -27,6 +28,7 @@ app.UseStaticFiles();
 app.UseRouting();
 
 app.UseAuthorization();
+app.MapHub<SignalRHub>("/Home/SignalR/SignalRHub");
 
 app.MapControllerRoute(
     name: "default",
