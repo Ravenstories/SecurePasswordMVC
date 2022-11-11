@@ -49,24 +49,6 @@
     private string? userInput;
     private string? messageInput;
 
-    /*
-        protected override async Task OnInitializedAsync()
-            {
-            hubConnection = new HubConnectionBuilder()
-            .WithUrl(NavManager.ToAbsoluteUri("/chathub"))
-        .WithAutomaticReconnect()
-        .Build();
-
-        hubConnection.On<string, string>("ReceiveMessage", (user, message) =>
-            {
-            var formattedMessage = $"{user}: {message}";
-            messages.Add(formattedMessage);
-            InvokeAsync(StateHasChanged);
-        });
-
-        await hubConnection.StartAsync();
-    } */
-
     private async Task Send()
     {
         if (hubConnection is not null)
@@ -77,31 +59,60 @@
 
     private async Task OpenConnection()
     {
+        RSACryptoServiceProvider RSA = new();
+        var publicKey = RSA.ToXmlString(false);
+        var privateKey = RSA.ExportParameters(true);
+        Aes aes;
+        aes = Aes.Create();
+        bool encryptedConnection = false;
+
         hubConnection = new HubConnectionBuilder().WithUrl(NavManager.ToAbsoluteUri("/chathub")).WithAutomaticReconnect().Build();
-        Console.WriteLine("OpenConnection has been called");
-
-
-        hubConnection.On<byte[], byte[]>("EncryptReply", (aesKey, aesIV) =>
-        {
-            Console.WriteLine("Invoking: EncryptReply");
-            var formattedMessage = $"Key: {aesKey}";
-            
-            
-            messages.Add(formattedMessage);
-            InvokeAsync(StateHasChanged);
-        });
-
+        
+        
         hubConnection.On<string, string>("ReceiveMessage", (user, message) =>
         {
             var formattedMessage = $"{user}: {message}";
             messages.Add(formattedMessage);
             InvokeAsync(StateHasChanged);
         });
+        
+
+        hubConnection.On<string>("EncryptReply", (reply) =>
+        {
+            messages.Add($"Server: {reply}");
+
+            if (reply == "Please Encrypt")
+            {
+                messages.Add($"Client: Sending Puplic Key");
+                messages.Add($"Client: Sending Puplic Key - " + publicKey);
+                hubConnection.InvokeAsync("Encrypt_Connection", publicKey);
+            }
+            InvokeAsync(StateHasChanged);
+        });
+
+        hubConnection.On<byte[], byte[]>("Encrypt_EncSymKey", (aesKeyEncrypted, aesIVEncrypted) =>
+        {
+            Console.WriteLine("Invoking: EncryptReply");
+
+            string formattedMessage = $"Client: Recieved AES Key - {Convert.ToBase64String(aesKeyEncrypted)}";
+            messages.Add(formattedMessage);
+
+            aes.Key = RSA_EncryptDecrypt.RSADecrypt(aesKeyEncrypted, privateKey, true);
+            aes.IV = RSA_EncryptDecrypt.RSADecrypt(aesIVEncrypted, privateKey, true);
+
+            InvokeAsync(StateHasChanged);
+            Console.WriteLine("");
+        });
 
         await hubConnection.StartAsync();
 
-        //Hub or Method does not exist... Look into this
-        await hubConnection.InvokeAsync("EncryptConnection", RSA_Encrypter.publicKey);
+        if (hubConnection?.State == HubConnectionState.Connected)
+        {
+            messages.Add("Connection Established");
+
+            await hubConnection.SendAsync("Encrypt");
+        }
+
     }
 
     public bool IsConnected => hubConnection?.State == HubConnectionState.Connected;

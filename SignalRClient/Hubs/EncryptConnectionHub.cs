@@ -17,8 +17,8 @@ namespace SignalRClient.Hubs
 
             Console.WriteLine(aes.Key);
             
-            byte[] aesKey = RSA_Encrypter.RSAEncrypt(aes.Key, publicKey, true);
-            byte[] aesIV = RSA_Encrypter.RSAEncrypt(aes.IV, publicKey, true);
+            byte[] aesKey = RSA_EncryptDecrypt.RSAEncrypt(aes.Key, publicKey, true);
+            byte[] aesIV = RSA_EncryptDecrypt.RSAEncrypt(aes.IV, publicKey, true);
 
             return Clients.Caller.SendAsync("EncryptReply", aesKey, aesIV );
         }
