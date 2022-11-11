@@ -21,11 +21,11 @@ namespace SecurePasswordMVC.Models
         };
 
         [Required]
-        public string Key { get; set; }
+        public string? Key { get; set; }
         [Required]
-        public string IV { get; set; }
+        public string? IV { get; set; }
         [Required]
-        public string UserChosenAlgorithm { get; set; }
+        public string? UserChosenAlgorithm { get; set; }
         public SymmetricAlgorithm? Algorithm { get; set; }
         public string? PlainText { get; set; }
         public string? CipherText { get; set; }

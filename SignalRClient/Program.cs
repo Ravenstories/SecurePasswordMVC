@@ -31,8 +31,7 @@ app.UseStaticFiles();
 app.UseRouting();
 
 app.MapBlazorHub();
-app.MapHub<ChatHub>("/ChatHub");
-app.MapHub<EncryptConnectionHub>("/EncryptConnectionHub");
+app.MapHub<ServerHub>("/ServerHub");
 app.MapFallbackToPage("/_Host");
 
 app.Run();

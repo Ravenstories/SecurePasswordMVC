@@ -1,6 +1,7 @@
 ﻿@page "/"
 @using Microsoft.AspNetCore.SignalR.Client
-@using SignalRClient.RSA;
+@using System.Text;
+@using SignalRClient.Functions;
 @using System.Security.Cryptography;
 @inject NavigationManager NavManager
 @implements IAsyncDisposable
@@ -18,7 +19,7 @@
     <div class="row">&nbsp;</div>
     <div class="row">
         <div class="col-6">
-            <input type="button" @onclick="Send" disabled="@(IsConnected == false)" id="sendButton" value="Send Message" />
+            <input type="button" @onclick="Send" disabled="@(IsConnected == false && !encryptedConnection)" id="sendButton" value="Send Message" />
         </div>
         <div class="col-6">
             <input type="button" @onclick="OpenConnection" id="openConnection" value="OpenConnection" />
@@ -44,52 +45,90 @@
 </ul>
 
 @code {
-    private HubConnection? hubConnection;
+    //Client specifig view and client data
     private List<string> messages = new();
     private string? userInput;
     private string? messageInput;
+    //Variables need for connection with the server
+    private HubConnection? hubConnection;
+    static SymmetricAlgorithm aes = Aes.Create();
+    private bool encryptedConnection = false;
+    public bool IsConnected => hubConnection?.State == HubConnectionState.Connected;
 
+    // Send is the main function for this page. It could simulate a chat function, but for it to activate we need a secure connection to the server. 
     private async Task Send()
     {
-        if (hubConnection is not null)
+        if (hubConnection is not null && encryptedConnection)
         {
-            await hubConnection.SendAsync("SendMessage", userInput, messageInput);
+            var incryptedUserInput = Aes_EncryptDecrypt.Encrypt(aes, userInput);
+            var incryptedMessageInput = Aes_EncryptDecrypt.Encrypt(aes, messageInput);
+            
+            var formattedMessage = $"{incryptedUserInput}: {incryptedMessageInput}";
+            messages.Add(formattedMessage);
+
+            await hubConnection.SendAsync("SendMessage", incryptedUserInput, incryptedMessageInput);
         }
     }
 
+    /**
+     * Open Connection is called when the user presses the open connection. We could also do it on initializing
+     * but for the sake of following along I decided to simulate it with the use of a button.
+     * It then opens the connection to the hub and the hub replies back with a please encrypt. 
+     */
     private async Task OpenConnection()
     {
+        //Simulation Data for keys and key exchange. 
         RSACryptoServiceProvider RSA = new();
         var publicKey = RSA.ToXmlString(false);
         var privateKey = RSA.ExportParameters(true);
-        Aes aes;
-        aes = Aes.Create();
-        bool encryptedConnection = false;
 
-        hubConnection = new HubConnectionBuilder().WithUrl(NavManager.ToAbsoluteUri("/chathub")).WithAutomaticReconnect().Build();
+        //Our SignalR Hubconnection. This simulates a connection to a server that wants to create a secure connection before messages can be send. 
+        hubConnection = new HubConnectionBuilder().WithUrl(NavManager.ToAbsoluteUri("/ServerHub")).WithAutomaticReconnect().Build();
         
-        
+        //Starts the connection to the hub
+        await hubConnection.StartAsync();
+        //Tells us that what ever we tried to reach existed. 
+        if (hubConnection?.State == HubConnectionState.Connected)
+        {
+            messages.Add("Connection Established");
+
+            await hubConnection.SendAsync("Encrypt");
+        }
+
+        //This is where the client recieves unencrypted messages from the server. 
         hubConnection.On<string, string>("ReceiveMessage", (user, message) =>
         {
             var formattedMessage = $"{user}: {message}";
             messages.Add(formattedMessage);
             InvokeAsync(StateHasChanged);
         });
-        
 
+        //When connections is established we can recieve secure messages here. 
+        hubConnection.On<byte[], byte[]>("ReceiveSecureMessage", (user, message) =>
+        {
+            var decryptedUserInput = Aes_EncryptDecrypt.Decrypt(aes, user);
+            var decryptedMessageInput = Aes_EncryptDecrypt.Decrypt(aes, message);
+
+            var formattedMessage = $"{decryptedUserInput}: {decryptedMessageInput}";
+            messages.Add(formattedMessage);
+           
+            InvokeAsync(StateHasChanged);
+        });
+        
+        //When the server tells us to encrypt our connection the client will reply with a public key 
         hubConnection.On<string>("EncryptReply", (reply) =>
         {
             messages.Add($"Server: {reply}");
 
             if (reply == "Please Encrypt")
             {
-                messages.Add($"Client: Sending Puplic Key");
                 messages.Add($"Client: Sending Puplic Key - " + publicKey);
                 hubConnection.InvokeAsync("Encrypt_Connection", publicKey);
             }
             InvokeAsync(StateHasChanged);
         });
 
+        //When server sends a encrypted AES key and IV we will then store it and use it forward. 
         hubConnection.On<byte[], byte[]>("Encrypt_EncSymKey", (aesKeyEncrypted, aesIVEncrypted) =>
         {
             Console.WriteLine("Invoking: EncryptReply");
@@ -100,22 +139,15 @@
             aes.Key = RSA_EncryptDecrypt.RSADecrypt(aesKeyEncrypted, privateKey, true);
             aes.IV = RSA_EncryptDecrypt.RSADecrypt(aesIVEncrypted, privateKey, true);
 
+            encryptedConnection = true; 
+            
             InvokeAsync(StateHasChanged);
-            Console.WriteLine("");
         });
 
-        await hubConnection.StartAsync();
-
-        if (hubConnection?.State == HubConnectionState.Connected)
-        {
-            messages.Add("Connection Established");
-
-            await hubConnection.SendAsync("Encrypt");
-        }
+        
 
     }
 
-    public bool IsConnected => hubConnection?.State == HubConnectionState.Connected;
 
     public async ValueTask DisposeAsync()
     {

@@ -12,8 +12,8 @@ using SecurePasswordMVC.Data;
 namespace SecurePasswordMVC.Migrations
 {
     [DbContext(typeof(DB_DataContext))]
-    [Migration("20221108151120_User")]
-    partial class User
+    [Migration("20221111170105_AddUserToDB")]
+    partial class AddUserToDB
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -39,6 +39,9 @@ namespace SecurePasswordMVC.Migrations
                     b.Property<string>("Password")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<byte[]>("Salt")
+                        .HasColumnType("varbinary(max)");
 
                     b.Property<string>("Username")
                         .IsRequired()

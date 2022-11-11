@@ -3,10 +3,14 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.Xml;
 using System.Text;
 
-namespace SignalRClient.RSA
+namespace SignalRClient.Functions
 {
     public static class RSA_EncryptDecrypt
     {
+        /// <summary>
+        /// Classic cookie cutter Encrypt and Decrypt RSA functions. 
+        /// Used on both server and client.  
+        /// </summary>
         public static byte[] RSAEncrypt(byte[] DataToEncrypt, RSAParameters RSAKeyInfo, bool DoOAEPPadding)
         {
             try
@@ -32,11 +36,9 @@ namespace SignalRClient.RSA
             catch (CryptographicException e)
             {
                 Console.WriteLine(e.Message);
-
                 return null;
             }
         }
-
         public static byte[] RSADecrypt(byte[] DataToDecrypt, RSAParameters RSAKeyInfo, bool DoOAEPPadding)
         {
             try
